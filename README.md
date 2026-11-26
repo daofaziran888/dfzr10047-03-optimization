@@ -16,7 +16,10 @@
 │   └── vite.config.ts        dev server 配置（open: false）
 ├── backend/                  FastAPI（Python） 后端
 │   ├── app/routers/resource.py  通用查询/导出/登记/动作接口
+│   ├── app/routers/shard_publish.py 待发布分片的确认单/领取/回执接口
 │   ├── app/services/<key>.py    每个模块独立领域逻辑
+│   ├── app/services/shard_publish.py 分片发布编排（冻结口径、回执幂等）
+│   ├── app/pipeline/shard_publish_manager.py 逐片校验与剩余选择纯逻辑
 │   ├── app/services/base.py     共享服务骨架
 │   └── app/store.py          内存数据仓库与示例数据
 ├── .gitignore
@@ -80,6 +83,37 @@ npm run dev
   `frontend/src/domain/<模块>.ts`，用于承载真实业务差异并维持36题位容量。
 - 列表接口统一返回 `{ items, total, page, size }`，动作接口统一返回 `{ ok, message }`。
 - 状态流转只允许在 `app/services` 里改，路由层不做业务判断。
+
+## 待发布分片发布
+
+输出契约页与结果投递页在通用表格之上各挂一块分片工作区，走独立的
+`/api/shard-publish/*` 受控接口（通用 `/api/{module}/{id}` 会抢匹配，故先注册）：
+
+| 接口 | 作用 |
+| --- | --- |
+| `GET /api/shard-publish/receipt?contract=&target=` | 按接收目标给出分片校验回执：哪些片可发、哪些片缺列 |
+| `POST /api/shard-publish/supplement` | 给仍待发布的分片补齐列；已领取的分片拒绝改写 |
+| `POST /api/shard-publish/sheets` | 编制确认单，同一张单上逐片核对判定 |
+| `POST /api/shard-publish/sheets/{no}/submit` | 领取已具备单独交付资格的分片，冻结范围与判定口径 |
+| `GET /api/shard-publish/deliveries/{no}` | 交付详情：分片回执、剩余选择、冻结口径、投递台账 |
+| `POST /api/shard-publish/deliveries/{no}/continue` | 未送达分片继续处理，沿用可恢复的剩余选择 |
+| `POST /api/shard-publish/deliveries/{no}/receive` | 登记接收回执，同一凭据幂等 |
+| `POST /api/shard-publish/deliveries/{no}/verify` | 已送达交付只接受核对 |
+
+要点：
+
+- **逐片校验**：每片按自身 `分片列` 对 `必填列` 校验，整批列的并集只用于判断越界。
+- **领取冻结**：确认单提交时把分片范围、行标识与契约判定口径一起冻结；契约阈值
+  事后变更只影响新提交，旧交付按 `口径回查` 沿用冻结口径。
+- **补值不溯及**：分片被领取后不能再补值改写；补值到达后须新开确认单另行交付，
+  页面在分片回执里标明 `所属交付`，可说清该片属于哪次实际交付。
+- **回执幂等**：同一 `receipt_token` 只结算一次，已接收的行重放不会在目标位置多出行。
+- **台账关联**：每次交付在 `result_deliver` 落一条台账，记录契约已验证字段范围、
+  实际接收的分片身份与逐片行数、接收回执编号；该台账行不接受通用「确认送达/登记
+  部分送达」动作，状态只由回执与核对推进。
+
+`publish_shard` / `confirm_sheet` / `publish_delivery` / `publish_receipt` /
+`publish_target_row` 是内部台账表，不进入模块列表与运营概览。
 
 领域：数据工程
 子方向：数据采集、爬虫与RPA

@@ -8,6 +8,13 @@ from typing import Any
 
 from app.seed import SEED_ROWS
 
+# 分片发布工作流的内部台账：不属于通用业务模块，不进模块列表与运营概览，
+# 只经发布专用服务读写。
+INTERNAL_TABLES = frozenset({
+    "publish_shard", "confirm_sheet", "publish_delivery",
+    "publish_receipt", "publish_target_row",
+})
+
 
 class Store:
     def __init__(self) -> None:
@@ -16,7 +23,8 @@ class Store:
         }
 
     def module_names(self) -> list[str]:
-        return sorted(self._tables)
+        return sorted(name for name in self._tables
+                      if name not in INTERNAL_TABLES)
 
     def reload_seed(self) -> None:
         """把全部表恢复成 seed.py 的初始示例数据，供本地重置与测试隔离使用。"""

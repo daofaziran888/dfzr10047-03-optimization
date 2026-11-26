@@ -757,7 +757,52 @@ SEED_ROWS: dict[str, list[dict[str, Any]]] = {
             "契约校验结论": "",
             "校验时间": "",
         },
+        {
+            "id": 5, "status": "已通过", "pending": False, "abnormal": False,
+            "契约编号": "OC-S01",
+            "关联批次": "PB-001",
+            "输出列集合": "id,currency,amount",
+            "列顺序约定": "id,currency,amount",
+            "必填列": "id,currency",
+            "行数下限": "1",
+            "分片行数下限": "1",
+            "契约校验结论": "通过:待发布分片按片校验，整批列并集不替代逐片必填列",
+            "校验时间": "2026-09-20T09:00:00",
+        },
     ],
+    # 以下为待发布分片工作流的内部表：不属于通用业务模块，只经发布专用接口读写。
+    "publish_shard": [
+        {
+            "id": 1, "status": "待发布", "pending": True, "abnormal": False,
+            "分片编号": "SH-A01", "关联契约": "OC-S01",
+            "接收目标": "/data/cooked/publish/settled/",
+            "分片列": "id,currency,amount", "必填列": "",
+            "行数": "2", "行标识": "A-R1,A-R2", "所属交付": "", "所属确认单": "",
+            "最近校验结论": "", "最近校验时间": "",
+        },
+        {
+            "id": 2, "status": "待发布", "pending": True, "abnormal": False,
+            "分片编号": "SH-B01", "关联契约": "OC-S01",
+            "接收目标": "/data/cooked/publish/settled/",
+            "分片列": "id,amount", "必填列": "",
+            "行数": "2", "行标识": "B-R1,B-R2", "所属交付": "", "所属确认单": "",
+            "最近校验结论": "", "最近校验时间": "",
+        },
+        {
+            "id": 3, "status": "待发布", "pending": True, "abnormal": False,
+            "分片编号": "SH-C01", "关联契约": "OC-S01",
+            "接收目标": "/data/cooked/publish/backup/",
+            "分片列": "id,currency,amount", "必填列": "",
+            "行数": "2", "行标识": "C-R1,C-R2", "所属交付": "", "所属确认单": "",
+            "最近校验结论": "", "最近校验时间": "",
+        },
+    ],
+    # 分片发布工作流的内部台账：不进通用模块列表，只经受控的发布接口读写。
+    "confirm_sheet": [],
+    "publish_delivery": [],
+    "publish_receipt": [],
+    "publish_target_row": [],
+
     "result_deliver": [
         {
             "id": 1, "status": "已送达", "pending": False, "abnormal": False,

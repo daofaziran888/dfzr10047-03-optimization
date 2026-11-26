@@ -88,6 +88,10 @@ class ResultDeliverService(BaseModuleService):
         record = self._find(deliver_no)
         if record is None:
             return False, f"投递记录 {deliver_no} 不存在"
+        if record.get("关联交付"):
+            return False, (
+                f"投递记录 {deliver_no} 关联分片交付 {record.get('关联交付')}，"
+                f"送达须由分片接收回执结算，不能在此直接确认")
         if record.get("status") == "已送达":
             return False, (
                 f"投递记录 {deliver_no} 已确认送达，投递结论不得被覆盖"
@@ -105,6 +109,10 @@ class ResultDeliverService(BaseModuleService):
         record = self._find(deliver_no)
         if record is None:
             return False, f"投递记录 {deliver_no} 不存在"
+        if record.get("关联交付"):
+            return False, (
+                f"投递记录 {deliver_no} 关联分片交付 {record.get('关联交付')}，"
+                f"须在交付详情按剩余选择继续处理，不能直接登记部分送达")
         if record.get("status") == "已送达":
             return False, (
                 f"投递记录 {deliver_no} 已确认送达，不能回退为部分送达"
@@ -127,12 +135,29 @@ class ResultDeliverService(BaseModuleService):
         record["投递时间"] = deliver_time
         return True, f"投递记录 {deliver_no} 部分送达，缺失 {missing} 行"
 
+    def run_action(self, entry_id: int, action: str) -> tuple[dict[str, Any] | None, str]:
+        """通用动作入口：分片交付的台账行只由接收回执结算，页面动作不得改写。"""
+        entry = self._find_ledger_by_id(entry_id)
+        if entry is not None and entry.get("关联交付"):
+            return None, (
+                f"投递记录 {entry.get('投递记录编号')} 关联分片交付 "
+                f"{entry.get('关联交付')}，状态只由接收回执与核对推进，"
+                f"不能通过「{action}」直接改写，请到交付详情处理")
+        return super().run_action(entry_id, action)
+
+    def _find_ledger_by_id(self, entry_id: int) -> dict[str, Any] | None:
+        return store.find(self.MODULE, entry_id)
+
     def retry_missing(self, deliver_no: str, still_missing: int,
                       retry_time: str) -> tuple[bool, str]:
         """重试补投缺失部分：超过重试上限后停止重试并保留缺口结论。"""
         record = self._find(deliver_no)
         if record is None:
             return False, f"投递记录 {deliver_no} 不存在"
+        if record.get("关联交付"):
+            return False, (
+                f"投递记录 {deliver_no} 关联分片交付 {record.get('关联交付')}，"
+                f"缺口须在交付详情继续处理，不走通用重试")
         if record.get("status") == "已送达":
             return False, f"投递记录 {deliver_no} 已送达，无需重试"
 

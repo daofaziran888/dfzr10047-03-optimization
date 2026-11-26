@@ -13,7 +13,8 @@
         <span class="head-desc">面向异构文件投递、格式探测、编码归一、解析器路由、抽取模板版本、字段解析、坏行隔离、结构嗅探、嵌套展平、取值转型、单位归一、输出契约、结果投递、解析水位与重解析编排的数据采集接入平台。</span>
         <span class="head-user">当前值班：数据工程组</span>
       </header>
-      <RouterView />
+      <!-- 按完整路径重建工作台：切模块或从确认单跳到交付详情时元数据与查询参数都要重读 -->
+      <RouterView :key="$route.fullPath" />
     </main>
   </div>
 </template>

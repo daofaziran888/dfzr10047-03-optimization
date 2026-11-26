@@ -28,6 +28,17 @@
       </span>
     </p>
 
+    <ShardPublishPanel
+      v-if="meta.key === 'output_contract'"
+      @open-delivery="openDelivery"
+    />
+
+    <ShardDeliveryPanel
+      v-if="meta.key === 'result_deliver'"
+      :focus-delivery="focusDelivery"
+      @changed="reload"
+    />
+
     <form class="filter-bar" @submit.prevent="reload">
       <label v-for="field in filterFields" :key="field" class="filter-item">
         <span>{{ field }}</span>
@@ -95,6 +106,7 @@
 
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
 
 import {
   createEntry,
@@ -104,9 +116,16 @@ import {
   runAction as applyAction,
 } from '@/api/backend-service'
 import type { EntryRow } from '@/data/types'
+import ShardDeliveryPanel from '@/components/ShardDeliveryPanel.vue'
+import ShardPublishPanel from '@/components/ShardPublishPanel.vue'
 
 const props = defineProps<{ moduleKey: string }>()
+const route = useRoute()
+const router = useRouter()
 const meta = moduleMeta(props.moduleKey)
+const focusDelivery = ref(
+  typeof route.query.delivery === 'string' ? route.query.delivery : '',
+)
 const rows = ref<EntryRow[]>([])
 const total = ref(0)
 const errorMessage = ref('')
@@ -185,6 +204,14 @@ async function reload() {
   } catch (error) {
     errorMessage.value = error instanceof Error ? error.message : '业务列表读取失败'
   }
+}
+
+function openDelivery(deliveryNo: string) {
+  focusDelivery.value = deliveryNo
+  void router.push({
+    path: '/result_deliver',
+    query: { delivery: deliveryNo },
+  })
 }
 
 onMounted(reload)
